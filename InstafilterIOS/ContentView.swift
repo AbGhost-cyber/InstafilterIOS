@@ -16,6 +16,10 @@ struct ContentView: View {
     @State private var showingImagePicker = false
     @State private var currentFilter: CIFilter = CIFilter.sepiaTone()
     @State private var showFilterSheet = false
+    @State private var processedImage: UIImage?
+    @State private var showingAlert = false
+    @State private var alertMsg = ""
+    
     let context = CIContext()
     
     var body: some View {
@@ -64,6 +68,9 @@ struct ContentView: View {
                 Button("Vignette") {setFilter(CIFilter.vignette())}
                 Button("Cancel", role: .cancel) {}
             }
+            .alert(alertMsg, isPresented: $showingAlert) {
+                Button("OK") {}
+            }
             .padding([.horizontal, .bottom])
             .navigationTitle("Insta Filter")
         }
@@ -82,9 +89,13 @@ struct ContentView: View {
     }
     
     func save() {
-        guard let uiImage = uiImage else { return }
-        ImageSaver()
-            .writeToPhotoAlbum(image: uiImage)
+        guard let processedImage = processedImage else { return }
+       ImageSaver()
+        .writeToPhotoAlbum(image: processedImage)
+        .onComplete = { error in
+           showingAlert = true
+            alertMsg = error == nil ? "Successfully saved your filtered photo ✅" : "couldn't save image ❌, check if photo access permission is permitted"
+        }
     }
     
     func applyProcessing() {
@@ -103,6 +114,7 @@ struct ContentView: View {
         if let cgImg = context.createCGImage(outputImage, from: outputImage.extent) {
             let uiImage = UIImage(cgImage: cgImg)
             image = Image(uiImage: uiImage)
+            processedImage = uiImage
         }
     }
 }
